@@ -1,7 +1,6 @@
 #Archive OD4B
 #Oscar
 #Sanitised version 20161025, search for 'domain.tld', 'domain_tld' and 'o365domain' for relevant locations to change
-#Fuck you I like tabs not spaces
 
 if ($args[2] -eq $null) {
 	$UsrFN = read-host -prompt "User's first name"
