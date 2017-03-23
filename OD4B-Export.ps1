@@ -17,14 +17,14 @@ if (Get-Module -ListAvailable -Name Microsoft.Online.Sharepoint.Powershell) {
     Write "Sharepoint Online Module Installed"
 } else {
     Write "Install Sharepoint Online Management Shell"
-	exit 1
+    exit 1
 }
 
 #Sign into SPO
 $UserCredential = Get-Credential -Message "Admin Credentials" -UserName $env:username@domain.tld
 Connect-SPOService -url https://o365domain-admin.sharepoint.com -Credential $UserCredential
 
-#Add Registry key
+#Add Registry key to make your sharepoint a trusted site
 $registryPath = "hkcu:\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\365domain-my.sharepoint.com"
 
 #Intranet
@@ -46,7 +46,6 @@ write "Wildcard reg key added trusted"
 New-ItemProperty -Path $registryPath -Name $name2 -Value $value1 -PropertyType DWORD -Force | Out-Null
 write "Wildcard reg key added local"
 
-
 #Need to open SPO in IE for the creds to be authenticated
 write "Signing into SPO"
 $IE=new-object -com internetexplorer.application
@@ -56,22 +55,28 @@ $IE.visible=$true
 #Literally does nothing but hold up the script and wait for authentication. You can write whatever you want
 $go = read-host -prompt "Continue?"
 
-
 $Url = "https://o365domain-my.sharepoint.com/personal/$($UsrFN)_$($UsrSN)_domain_tld"
 
+#Connects to the site and adds you as a Collection Admin
 write "Connecting to $($Url)"
 $site = Get-SPOSite -Identity $Url
 Set-SPOUser -Site $site.Url -LoginName $env:username@domain.tld -IsSiteCollectionAdmin $true
 
+#Selects a random unusued drive between u and z
 $Drv = ls function:[u-z]: -n | ?{ !(test-path $_) } | select -first 1
 write "Mapping to $($Drv)"
 
-
+#Path of the site
 $Rt = "\\o365domain-my.sharepoint.com@ssl\davwwwroot\personal\$($UsrFN)_$($UsrSN)_domain_tld\documents"
 
+#Maps to drive selected above
 net use $drv $rt
 
+#Robocopies from cloud to local
 robocopy $Drv "$($Cloc)\OD4B" * /move /r:6 /w:10 /e /np /tee /log+:"$($Cloc)\OD4B\robocopy.log"
 
+#Removed the mapped drive
 net use $drv /delete
+
+#Dissconnects SPO service -- Essential so you don't burn your admin connections with SPO!
 disconnect-sposervice
